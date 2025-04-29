@@ -1,98 +1,143 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🚀 Transactions with QueryRunner in NestJS - DRY Implementation
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Este proyecto demuestra cómo implementar **transacciones de base de datos** en NestJS usando el **QueryRunner de TypeORM** siguiendo el estilo de arquitectura modular sugerido por Nest y  aplicando el principio **DRY (Don't Repeat Yourself)** para evitar código duplicado en operaciones transaccionales.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 🚀 Tecnologías utilizadas
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [NestJS](https://nestjs.com/) (v11)
+- [TypeORM](https://typeorm.io/)
+- PostgreSQL/MySQL/SQLite (configurable)
+- Node.js & TypeScript
+- pnpm (opcional)
 
-## Project setup
+---
 
-```bash
-$ pnpm install
+## 📦 Estructura del proyecto
+
+```
+src/
+├── employees/
+│   ├── employees.controller.ts
+│   ├── employees.module.ts
+│   ├── employees.service.ts
+│   └── entities/
+│       └── employee.entity.ts
+├── users/
+│   ├── users.service.ts
+│   └── entities/
+│       └── user.entity.ts
+├── common/
+│   └── services/
+│       └── transaction.service.ts  # Contiene la lógica transaccional reutilizable
+├── app.module.ts
+└── main.ts
 ```
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ pnpm run start
+## 📚 ¿Por qué usar QueryRunner?
 
-# watch mode
-$ pnpm run start:dev
+El **QueryRunner de TypeORM** permite:
+- Control manual de transacciones
+- Operaciones atómicas (todo o nada)
+- Reutilización de lógica transaccional (DRY)
+- Mayor flexibilidad que decoradores `@Transaction`
 
-# production mode
-$ pnpm run start:prod
+---
+
+## 🔄 Flujo transaccional implementado
+
+1. **Inicio de transacción**: Se crea un `QueryRunner` y se inicia la transacción
+2. **Ejecución**: Todas las operaciones de DB usan el mismo `QueryRunner`
+3. **Confirmación/Rollback**:
+    - Si todo sale bien → `commitTransaction()`
+    - Si hay errores → `rollbackTransaction()`
+6. **Liberación**: El QueryRunner se libera siempre en el finally
+
+---
+
+## 🧩 Cómo funciona el servicio transaccional
+
+El `TransactionService` centraliza la lógica para:
+
+```typescript
+async runInTransaction<T>(
+  callback: (qr: QueryRunner) => Promise<T>
+): Promise<T> {
+  const queryRunner = this.dataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
+
+  try {
+    const result = await callback(queryRunner);
+    await queryRunner.commitTransaction();
+    return result;
+  } catch (error) {
+    await queryRunner.rollbackTransaction();
+    throw error;
+  } finally {
+    await queryRunner.release();
+  }
+}
 ```
 
-## Run tests
+---
+
+## 🛠️ Instalación y uso
 
 ```bash
-# unit tests
-$ pnpm run test
+# Clona el repositorio
+git clone https://github.com/Josmendev/query-runner-dry.git
 
-# e2e tests
-$ pnpm run test:e2e
+# Entra al proyecto
+cd tuto-query-runner
 
-# test coverage
-$ pnpm run test:cov
+# Instala dependencias
+pnpm install
+
+# Levanta la base de datos
+docker compose up -d
+
+# Ejecuta en modo desarrollo
+pnpm start:dev
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 📬 Prueba el endpoint
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Puedes usar herramientas como Insomnia o Postman para probar el endpoint.
 
-```bash
-$ pnpm install -g mau
-$ mau deploy
+```json
+POST /employees
+Content-Type: application/json
+
+{
+  "firstName": "Jose",
+  "lastName": "Menacho",
+  "identityNumberDocument": "12345678"
+}
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## 🎯 Beneficios clave
 
-Check out a few resources that may come in handy when working with NestJS:
+- ✅ **Código más limpio:** Elimina duplicación de lógica transaccional
+- ✅ **Consistencia garantizada:** Operaciones atómicas (todo o nada)
+- ✅ **Mantenibilidad:** Cambios en un solo lugar afectan a toda la app
+- ✅ **Flexibilidad:** Fácil de extender para casos complejos
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+## 📝 Licencia
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Este proyecto está bajo la licencia MIT. Siéntete libre de usarlo como referencia o para aprender.
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## ✨ Autor
 
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+JosmenDev - [@josmendev](https://github.com/josmendev)
