@@ -1,0 +1,13 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    container_name: tuto-query-runner
+    volumes:
+      - ./mysql:/var/lib/mysql
+  
